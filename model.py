@@ -85,8 +85,26 @@ class TaskManager:
             print("Índice de tarea inválido.")
 
     def sort_by_date(self):
-        self.tasks.sort(key=lambda x: datetime.strptime(x.due_date, "%Y-%m-%d") if x.due_date else datetime.max)
-        self.list_tasks()
+        # Separar tareas con y sin fecha de vencimiento
+        tasks_with_date = [task for task in self.tasks if task.due_date]
+        tasks_without_date = [task for task in self.tasks if not task.due_date]
+
+        # Ordenar tareas con fecha de vencimiento
+        tasks_with_date.sort(key=lambda x: datetime.strptime(x.due_date, "%Y-%m-%d"))
+
+        # Mostrar tareas ordenadas
+        print("Tareas ordenadas por fecha de vencimiento:")
+        for i, task in enumerate(tasks_with_date, 1):
+            print(f"{i}. {task}")
+
+        # Mostrar tareas sin fecha de vencimiento al final
+        if tasks_without_date:
+            print("\nTareas sin fecha de vencimiento:")
+            for i, task in enumerate(tasks_without_date, len(tasks_with_date) + 1):
+                print(f"{i}. {task}")
+
+        # Actualizar la lista de tareas con el nuevo orden
+        self.tasks = tasks_with_date + tasks_without_date
 
     def set_priority(self, index, priority):
         if 1 <= index <= len(self.tasks):
