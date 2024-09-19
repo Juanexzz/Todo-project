@@ -1,174 +1,137 @@
 import csv
 from datetime import datetime
-from enum import Enum
 
-class Priority(Enum):
-    LOW = "baja"
-    MEDIUM = "media"
-    HIGH = "alta"
 
-class Task:
-    def __init__(self, description, due_date=None, priority=Priority.MEDIUM):
-        self.description = description
-        self.due_date = due_date
-        self.completed = False
-        self.priority = priority
+class Tarea:
+    def __init__(self, descripcion, fecha_vencimiento=None, completada=False, prioridad="baja"):
+        self.descripcion = descripcion
+        self.fecha_vencimiento = fecha_vencimiento
+        self.completada = completada
+        self.prioridad = prioridad
 
-    def mark_as_completed(self):
-        self.completed = True
+    def marcar_como_completada(self):
+        self.completada = True
 
-    def __str__(self):
-        status = "Completada" if self.completed else "Pendiente"
-        due_date = f", Fecha límite: {self.due_date}" if self.due_date else ""
-        return f"{self.description} - Estado: {status}{due_date}, Prioridad: {self.priority.value}"
+    def mostrar_tarea(self):
+        estado = "Completada" if self.completada else "Pendiente"
+        fecha = f"Fecha límite: {self.fecha_vencimiento}" if self.fecha_vencimiento else "Sin fecha límite"
+        return f"{self.descripcion} - {estado} - {fecha} - Prioridad: {self.prioridad}"
 
-class TaskManager:
+
+class SistemaGestionTareas:
     def __init__(self):
-        self.tasks = []
+        self.tareas = []
 
-    def add_task(self, description, due_date=None, priority=Priority.MEDIUM):
-        task = Task(description, due_date, priority)
-        self.tasks.append(task)
-        print("Tarea añadida con éxito.")
+    def agregar_tarea(self, tarea):
+        self.tareas.append(tarea)
 
-    def list_tasks(self):
-        for i, task in enumerate(self.tasks, 1):
-            print(f"{i}. {task}")
+    def listar_tareas(self, filtro=None):
+        tareas_filtradas = self.tareas
+        if filtro == "completadas":
+            tareas_filtradas = [t for t in self.tareas if t.completada]
+        elif filtro == "pendientes":
+            tareas_filtradas = [t for t in self.tareas if not t.completada]
 
-    def complete_task(self, index):
-        if 1 <= index <= len(self.tasks):
-            self.tasks[index-1].mark_as_completed()
-            print("Tarea marcada como completada.")
+        for i, tarea in enumerate(tareas_filtradas):
+            print(f"{i + 1}. {tarea.mostrar_tarea()}")
+
+    def marcar_como_completada(self, indice):
+        if 0 <= indice < len(self.tareas):
+            self.tareas[indice].marcar_como_completada()
         else:
             print("Índice de tarea inválido.")
 
-    def delete_task(self, index):
-        if 1 <= index <= len(self.tasks):
-            del self.tasks[index-1]
-            print("Tarea eliminada con éxito.")
+    def eliminar_tarea(self, indice):
+        if 0 <= indice < len(self.tareas):
+            del self.tareas[indice]
         else:
             print("Índice de tarea inválido.")
 
-    def save_tasks(self):
-        with open('tasks.csv', 'w', newline='') as file:
-            writer = csv.writer(file)
-            for task in self.tasks:
-                writer.writerow([task.description, task.due_date, task.completed, task.priority.value])
-        print("Tareas guardadas en el archivo.")
+    def guardar_en_archivo(self, nombre_archivo="tareas.csv"):
+        with open(nombre_archivo, mode='w', newline='', encoding='utf-8') as archivo:
+            escritor = csv.writer(archivo)
+            for tarea in self.tareas:
+                escritor.writerow([tarea.descripcion, tarea.fecha_vencimiento, tarea.completada, tarea.prioridad])
 
-    def load_tasks(self):
+    def cargar_desde_archivo(self, nombre_archivo="tareas.csv"):
         try:
-            with open('tasks.csv', 'r') as file:
-                reader = csv.reader(file)
-                self.tasks = []
-                for row in reader:
-                    description, due_date, completed, priority = row
-                    task = Task(description, due_date, Priority(priority))
-                    task.completed = completed.lower() == 'true'
-                    self.tasks.append(task)
-            print("Tareas cargadas desde el archivo.")
+            with open(nombre_archivo, mode='r', encoding='utf-8') as archivo:
+                lector = csv.reader(archivo)
+                self.tareas = []
+                for fila in lector:
+                    descripcion, fecha_vencimiento, completada, prioridad = fila
+                    self.tareas.append(Tarea(descripcion, fecha_vencimiento, completada == 'True', prioridad))
         except FileNotFoundError:
-            print("No se encontró el archivo de tareas. Se iniciará con una lista vacía.")
+            print("Archivo no encontrado. Se iniciará con una lista de tareas vacía.")
 
-    def filter_tasks(self, status):
-        filtered = [task for task in self.tasks if task.completed == (status.lower() == "completed")]
-        for i, task in enumerate(filtered, 1):
-            print(f"{i}. {task}")
-
-    def edit_task(self, index, new_description, new_due_date=None):
-        if 1 <= index <= len(self.tasks):
-            task = self.tasks[index-1]
-            task.description = new_description
-            task.due_date = new_due_date
-            print("Tarea actualizada con éxito.")
+    def editar_tarea(self, indice, nueva_descripcion, nueva_fecha_vencimiento=None):
+        if 0 <= indice < len(self.tareas):
+            self.tareas[indice].descripcion = nueva_descripcion
+            self.tareas[indice].fecha_vencimiento = nueva_fecha_vencimiento
         else:
             print("Índice de tarea inválido.")
 
-    def sort_by_date(self):
-        # Separar tareas con y sin fecha de vencimiento
-        tasks_with_date = [task for task in self.tasks if task.due_date]
-        tasks_without_date = [task for task in self.tasks if not task.due_date]
+    def ordenar_por_fecha(self):
+        self.tareas.sort(
+            key=lambda x: datetime.strptime(x.fecha_vencimiento, "%Y-%m-%d") if x.fecha_vencimiento else datetime.max)
 
-        # Ordenar tareas con fecha de vencimiento
-        tasks_with_date.sort(key=lambda x: datetime.strptime(x.due_date, "%Y-%m-%d"))
-
-        # Mostrar tareas ordenadas
-        print("Tareas ordenadas por fecha de vencimiento:")
-        for i, task in enumerate(tasks_with_date, 1):
-            print(f"{i}. {task}")
-
-        # Mostrar tareas sin fecha de vencimiento al final
-        if tasks_without_date:
-            print("\nTareas sin fecha de vencimiento:")
-            for i, task in enumerate(tasks_without_date, len(tasks_with_date) + 1):
-                print(f"{i}. {task}")
-
-        # Actualizar la lista de tareas con el nuevo orden
-        self.tasks = tasks_with_date + tasks_without_date
-
-    def set_priority(self, index, priority):
-        if 1 <= index <= len(self.tasks):
-            try:
-                self.tasks[index-1].priority = Priority(priority.lower())
-                print(f"Prioridad de la tarea establecida a {priority}.")
-            except ValueError:
+    def asignar_prioridad(self, indice, prioridad):
+        if 0 <= indice < len(self.tareas):
+            if prioridad in ["alta", "media", "baja"]:
+                self.tareas[indice].prioridad = prioridad
+            else:
                 print("Prioridad inválida. Use 'alta', 'media' o 'baja'.")
         else:
             print("Índice de tarea inválido.")
 
-def main():
-    manager = TaskManager()
-    manager.load_tasks()
+
+# Ejemplo de uso
+if __name__ == "__main__":
+    sistema = SistemaGestionTareas()
+    sistema.cargar_desde_archivo()
 
     while True:
-        command = input("Ingrese un comando (add/list/complete/delete/filter/edit/sort/priority/save/exit): ").lower()
+        print("\n--- Sistema de Gestión de Tareas ---")
+        print("1. Añadir tarea")
+        print("2. Listar tareas")
+        print("3. Marcar tarea como completada")
+        print("4. Eliminar tarea")
+        print("5. Editar tarea")
+        print("6. Ordenar tareas por fecha")
+        print("7. Asignar prioridad a una tarea")
+        print("8. Guardar y salir")
 
-        if command == "add":
-            desc = input("Descripción de la tarea: ")
-            date = input("Fecha límite (YYYY-MM-DD) o presione Enter para omitir: ")
-            date = date if date else None
-            manager.add_task(desc, date)
+        opcion = input("Seleccione una opción: ")
 
-        elif command == "list":
-            manager.list_tasks()
-
-        elif command == "complete":
-            index = int(input("Índice de la tarea a completar: "))
-            manager.complete_task(index)
-
-        elif command == "delete":
-            index = int(input("Índice de la tarea a eliminar: "))
-            manager.delete_task(index)
-
-        elif command == "filter":
-            status = input("Estado a filtrar (completed/pending): ")
-            manager.filter_tasks(status)
-
-        elif command == "edit":
-            index = int(input("Índice de la tarea a editar: "))
-            new_desc = input("Nueva descripción: ")
-            new_date = input("Nueva fecha límite (YYYY-MM-DD) o presione Enter para omitir: ")
-            new_date = new_date if new_date else None
-            manager.edit_task(index, new_desc, new_date)
-
-        elif command == "sort":
-            manager.sort_by_date()
-
-        elif command == "priority":
-            index = int(input("Índice de la tarea: "))
-            priority = input("Nueva prioridad (alta/media/baja): ")
-            manager.set_priority(index, priority)
-
-        elif command == "save":
-            manager.save_tasks()
-
-        elif command == "exit":
-            manager.save_tasks()
-            print("¡Hasta luego!")
+        if opcion == "1":
+            descripcion = input("Ingrese la descripción de la tarea: ")
+            fecha = input("Ingrese la fecha límite (YYYY-MM-DD) o deje en blanco: ")
+            fecha = fecha if fecha else None
+            sistema.agregar_tarea(Tarea(descripcion, fecha))
+        elif opcion == "2":
+            filtro = input("Filtrar por (todas/completadas/pendientes): ")
+            sistema.listar_tareas(filtro if filtro in ["completadas", "pendientes"] else None)
+        elif opcion == "3":
+            indice = int(input("Ingrese el índice de la tarea a completar: ")) - 1
+            sistema.marcar_como_completada(indice)
+        elif opcion == "4":
+            indice = int(input("Ingrese el índice de la tarea a eliminar: ")) - 1
+            sistema.eliminar_tarea(indice)
+        elif opcion == "5":
+            indice = int(input("Ingrese el índice de la tarea a editar: ")) - 1
+            nueva_descripcion = input("Ingrese la nueva descripción: ")
+            nueva_fecha = input("Ingrese la nueva fecha límite (YYYY-MM-DD) o deje en blanco: ")
+            sistema.editar_tarea(indice, nueva_descripcion, nueva_fecha if nueva_fecha else None)
+        elif opcion == "6":
+            sistema.ordenar_por_fecha()
+            print("Tareas ordenadas por fecha.")
+        elif opcion == "7":
+            indice = int(input("Ingrese el índice de la tarea: ")) - 1
+            prioridad = input("Ingrese la prioridad (alta/media/baja): ")
+            sistema.asignar_prioridad(indice, prioridad)
+        elif opcion == "8":
+            sistema.guardar_en_archivo()
+            print("Tareas guardadas. ¡Hasta luego!")
             break
-
         else:
-            print("Comando no reconocido. Intente de nuevo.")
-
-if __name__ == "__main__":
-    main()
+            print("Opción no válida. Por favor, intente de nuevo.")
